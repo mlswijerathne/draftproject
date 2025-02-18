@@ -6,11 +6,13 @@ class DriverHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Driver Home'),
-      ),
       body: Center(
-        child: Text('Welcome, Driver!'),
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.pushNamed(context, '/driver_tracking');
+          },
+          child: const Text('Start Tracking'),
+        ),
       ),
     );
   }

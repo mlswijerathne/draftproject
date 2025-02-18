@@ -134,6 +134,7 @@ class HomeContent extends StatelessWidget {
                       label: 'Track Truck',
                       onTap: () {
                         // Add track truck functionality
+                        Navigator.pushNamed(context, '/truck_viewer');
                       },
                     ),
                     _buildQuickActionButton(

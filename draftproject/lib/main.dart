@@ -1,4 +1,6 @@
+import 'package:draftproject/screens/driver/truck_tracking_screen.dart';
 import 'package:draftproject/screens/management/city_management_home.dart';
+import 'package:draftproject/screens/resident/truck_viewer_screen.dart';
 import 'package:firebase_core/firebase_core.dart'; // Import Firebase Core
 import 'package:flutter/material.dart';
 import 'package:draftproject/screens/resident/home_screen.dart'; // Import HomeScreen
@@ -35,6 +37,8 @@ class MyApp extends StatelessWidget {
         '/driver_home': (context) => DriverHomeScreen(),
         '/city_management_home': (context) => CityManagementHomeScreen(),
         '/resident_profile': (context) => ProfileScreen(),
+        '/truck_viewer': (context) => const TruckViewerScreen(),
+        '/driver_tracking': (context) => const TruckTrackingScreen(),
         
       },
     );
