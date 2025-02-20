@@ -13,7 +13,8 @@ import 'package:draftproject/screens/driver/driver_home.dart';
 import 'package:draftproject/screens/resident/profile_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter binding is initialized
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Ensure Flutter binding is initialized
   await Firebase.initializeApp(); // Initialize Firebase
   runApp(const MyApp());
 }
@@ -32,14 +33,13 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(), // Route for LoginScreen
         '/register': (context) => SignUpScreen(), // Route for RegisterScreen
         '/home': (context) => const HomeScreen(), // Route for HomeScreen
-        '/loading':(context) => LoadingScreen(),
-        '/resident_location' : (context) => ResidentLocation(),
+        '/loading': (context) => LoadingScreen(),
+        '/resident_location': (context) => ResidentLocation(),
         '/driver_home': (context) => DriverHomeScreen(),
         '/city_management_home': (context) => CityManagementHomeScreen(),
         '/resident_profile': (context) => ProfileScreen(),
         '/truck_viewer': (context) => const TruckViewerScreen(),
         '/driver_tracking': (context) => const TruckTrackingScreen(),
-        
       },
     );
   }

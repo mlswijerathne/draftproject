@@ -43,6 +43,7 @@ class CustomBottomNav extends StatelessWidget {
                 Navigator.pushNamed(context, '/resident_profile');
               }
               
+              
             },
             type: BottomNavigationBarType.fixed,
             backgroundColor: Colors.transparent,

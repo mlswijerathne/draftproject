@@ -25,6 +25,17 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
     super.initState();
     _checkLocationPermission();
     _loadCurrentUser();
+    _checkActiveTracking();
+  }
+
+  Future<void> _checkActiveTracking() async {
+    currentUser = await _authService.getCurrentUser();
+    if (currentUser != null) {
+      bool isActive = await _trackingService.isDriverActive(currentUser!.uid);
+      setState(() {
+        isTracking = isActive;
+      });
+    }
   }
 
   Future<void> _loadCurrentUser() async {

@@ -1,7 +1,9 @@
-import 'package:draftproject/models/truck_location_modek.dart';
+// truck_viewer_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/tracking_service.dart';
+import '../../models/truck_location_modek.dart';
 
 class TruckViewerScreen extends StatefulWidget {
   const TruckViewerScreen({super.key});
@@ -14,25 +16,41 @@ class _TruckViewerScreenState extends State<TruckViewerScreen> {
   final TrackingService _trackingService = TrackingService();
   GoogleMapController? mapController;
   Set<Marker> _markers = {};
+  bool _isFirstLoad = true;
 
-  void _updateMarkers(List<TruckLocationModel> trucks) {
-    setState(() {
-      _markers = trucks.map((truck) {
-        return Marker(
-          markerId: MarkerId(truck.driverId),
-          position: LatLng(truck.latitude, truck.longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          infoWindow: InfoWindow(
-            title: 'Driver: ${truck.driverName}',
-            snippet: 'Last updated: ${_formatDateTime(truck.timestamp)}',
-          ),
-        );
-      }).toSet();
-    });
+  Set<Marker> _createMarkers(List<TruckLocationModel> trucks) {
+    return trucks.map((truck) {
+      return Marker(
+        markerId: MarkerId(truck.driverId),
+        position: LatLng(truck.latitude, truck.longitude),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: InfoWindow(
+          title: 'Driver: ${truck.driverName}',
+          snippet: 'Last updated: ${_formatDateTime(truck.timestamp)}',
+        ),
+      );
+    }).toSet();
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    mapController = controller;
   }
 
   String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.hour}:${dateTime.minute}';
+    String minutes = dateTime.minute.toString().padLeft(2, '0');
+    return '${dateTime.hour}:$minutes';
+  }
+
+  void _centerMapOnFirstTruck(List<TruckLocationModel> trucks) {
+    if (_isFirstLoad && trucks.isNotEmpty && mapController != null) {
+      _isFirstLoad = false;
+      mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(trucks.first.latitude, trucks.first.longitude),
+          15,
+        ),
+      );
+    }
   }
 
   @override
@@ -44,14 +62,19 @@ class _TruckViewerScreenState extends State<TruckViewerScreen> {
       body: StreamBuilder<List<TruckLocationModel>>(
         stream: _trackingService.getActiveTrucks(),
         builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            _updateMarkers(snapshot.data!);
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+            _markers = _createMarkers(snapshot.data!);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _centerMapOnFirstTruck(snapshot.data!);
+            });
           }
 
           return GoogleMap(
-            onMapCreated: (controller) {
-              mapController = controller;
-            },
+            onMapCreated: _onMapCreated,
             initialCameraPosition: const CameraPosition(
               target: LatLng(6.9271, 79.8612), // Default to Colombo
               zoom: 12,

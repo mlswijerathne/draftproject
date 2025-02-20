@@ -1,0 +1,2 @@
+C:/Users/EX BOOK/Desktop/MAD project/draftproject/draftproject/android/app/.cxx/Debug/2p6c3a4l/x86/CMakeFiles/edit_cache.dir
+C:/Users/EX BOOK/Desktop/MAD project/draftproject/draftproject/android/app/.cxx/Debug/2p6c3a4l/x86/CMakeFiles/rebuild_cache.dir
