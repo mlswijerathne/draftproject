@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:draftproject/models/user_model.dart';
 import 'package:draftproject/services/auth_service.dart';
 import 'edit_profile_screen.dart';
+import 'dart:convert';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,7 +17,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserModel? currentUser;
   bool isLoading = true;
   bool isAuthorized = false;
-  String? profileImageUrl;
+  String? base64Image;
 
   @override
   void initState() {
@@ -58,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           currentUser = user;
         });
-        await _getProfileImageUrl(user.uid);
+        await _getProfileImage(user.uid);
       }
     } catch (e) {
       if (mounted) {
@@ -70,12 +71,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => isLoading = false);
   }
 
-  Future<void> _getProfileImageUrl(String uid) async {
+  Future<void> _getProfileImage(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists && doc.data()!.containsKey('profileImageUrl')) {
+      if (doc.exists && doc.data()!.containsKey('profileImage')) {
         setState(() {
-          profileImageUrl = doc.data()!['profileImageUrl'] as String;
+          base64Image = doc.data()!['profileImage'] as String;
         });
       }
     } catch (e) {
@@ -131,10 +132,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 60,
-                    backgroundImage: profileImageUrl != null
-                        ? NetworkImage(profileImageUrl!)
+                    backgroundImage: base64Image != null
+                        ? MemoryImage(base64Decode(base64Image!))
                         : const AssetImage('assets/default_profile.png') as ImageProvider,
-                    child: profileImageUrl == null
+                    child: base64Image == null
                         ? const Icon(Icons.person, size: 50, color: Colors.grey)
                         : null,
                   ),
@@ -152,11 +153,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               width: double.infinity,
               constraints: const BoxConstraints(
-                minHeight: 250, // Adjusted height
+                minHeight: 250,
               ),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white, // Card background color
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: [
                   BoxShadow(
@@ -186,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF59A867),
+                      backgroundColor: const Color(0xFF59A867),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                     icon: const Icon(Icons.edit, color: Colors.white),
@@ -221,7 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // User Details Widget
   Widget _buildProfileInfo(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
@@ -233,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.black54, // Softer text color for labels
+              color: Colors.black54,
             ),
           ),
           const SizedBox(height: 5),
@@ -241,14 +241,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200, // Light gray background
+              color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               value,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.black87, // Darker color for text
+                color: Colors.black87,
               ),
             ),
           ),

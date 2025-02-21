@@ -1,9 +1,9 @@
-import 'package:draftproject/models/user_model.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
+import 'package:draftproject/models/user_model.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -17,7 +17,7 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   bool isLoading = false;
   File? _imageFile;
-  String? profileImageUrl;
+  String? base64Image;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _nicController = TextEditingController();
@@ -30,7 +30,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     _initializeControllers();
-    _getProfileImageUrl();
+    _getProfileImage();
   }
 
   void _initializeControllers() {
@@ -42,15 +42,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController.text = widget.user.username;
   }
 
-  Future<void> _getProfileImageUrl() async {
+  Future<void> _getProfileImage() async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.user.uid)
           .get();
-      if (doc.exists && doc.data()!.containsKey('profileImageUrl')) {
+      if (doc.exists && doc.data()!.containsKey('profileImage')) {
         setState(() {
-          profileImageUrl = doc.data()!['profileImageUrl'] as String;
+          base64Image = doc.data()!['profileImage'] as String;
         });
       }
     } catch (e) {
@@ -71,6 +71,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         setState(() {
           _imageFile = File(image.path);
         });
+        // Convert image to base64 immediately after picking
+        await _convertImageToBase64();
       }
     } catch (e) {
       if (mounted) {
@@ -81,32 +83,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Future<void> _uploadImage() async {
+  Future<void> _convertImageToBase64() async {
     if (_imageFile == null) return;
 
     try {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('profile_images')
-          .child('${widget.user.uid}.jpg');
-
-      await ref.putFile(_imageFile!);
-      final url = await ref.getDownloadURL();
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.user.uid)
-          .update({'profileImageUrl': url});
-
+      List<int> imageBytes = await _imageFile!.readAsBytes();
+      String base64String = base64Encode(imageBytes);
       setState(() {
-        profileImageUrl = url;
+        base64Image = base64String;
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading image: $e')),
-        );
-      }
+      print('Error converting image to base64: $e');
     }
   }
 
@@ -115,10 +102,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     try {
       setState(() => isLoading = true);
-
-      if (_imageFile != null) {
-        await _uploadImage();
-      }
 
       final updatedUser = UserModel(
         uid: widget.user.uid,
@@ -131,10 +114,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         email: _emailController.text.trim(),
       );
 
+      Map<String, dynamic> userData = updatedUser.toMap();
+      
+      // Add base64Image to userData if it exists
+      if (base64Image != null) {
+        userData['profileImage'] = base64Image;
+      }
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.user.uid)
-          .update(updatedUser.toMap());
+          .update(userData);
 
       setState(() => isLoading = false);
 
@@ -197,12 +187,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundImage: _imageFile != null
-                          ? FileImage(_imageFile!) as ImageProvider
-                          : (profileImageUrl != null
-                              ? NetworkImage(profileImageUrl!)
-                              : const AssetImage('assets/images/resident/default_profile_picture.jpg'))
-                              as ImageProvider,
+                      backgroundImage: _getProfileImageProvider(),
                     ),
                     Positioned(
                       right: 0,
@@ -223,9 +208,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  
                 ),
-                color: Color(0xFFFFFFFF), 
+                color: Color(0xFFFFFFFF),
                 elevation: 5,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -267,6 +251,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       ),
     );
+  }
+
+  ImageProvider _getProfileImageProvider() {
+    if (_imageFile != null) {
+      return FileImage(_imageFile!);
+    } else if (base64Image != null) {
+      return MemoryImage(base64Decode(base64Image!));
+    }
+    return const AssetImage('assets/images/resident/default_profile_picture.jpg');
   }
 
   Widget _buildInputField(

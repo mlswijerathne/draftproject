@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/tracking_service.dart';
+import 'package:draftproject/services/direction_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
 
@@ -14,11 +16,15 @@ class TruckTrackingScreen extends StatefulWidget {
 
 class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   final TrackingService _trackingService = TrackingService();
+  final DirectionsService _directionsService = DirectionsService();
   final AuthService _authService = AuthService();
   GoogleMapController? mapController;
   Position? currentPosition;
   bool isTracking = false;
   UserModel? currentUser;
+  Set<Polyline> _polylines = {};
+  List<LatLng> _routePoints = [];
+  Timer? _locationTimer; // Added missing Timer field
 
   @override
   void initState() {
@@ -70,9 +76,8 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
   Future<void> _getCurrentLocation() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high
-      );
-      
+          desiredAccuracy: LocationAccuracy.high);
+
       setState(() {
         currentPosition = position;
       });
@@ -110,24 +115,49 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
 
   void _startTracking() async {
     if (currentUser == null) return;
-    
+
     setState(() {
       isTracking = true;
+      _routePoints = [];
     });
-    
+
     await _trackingService.startTracking(
       currentUser!.uid,
       currentUser!.name,
     );
+
+    // Start tracking route points
+    _locationTimer =
+        Timer.periodic(const Duration(seconds: 10), (timer) async {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      setState(() {
+        _routePoints.add(LatLng(position.latitude, position.longitude));
+        _polylines = {
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: _routePoints,
+            color: Colors.blue,
+            width: 5,
+          ),
+        };
+      });
+
+      await _trackingService.UpdateRoutePoints(currentUser!.uid, _routePoints as LatLng);
+    });
   }
 
   void _stopTracking() async {
     if (currentUser == null) return;
-    
+
     setState(() {
       isTracking = false;
+      _polylines.clear();
+      _routePoints.clear();
     });
-    
+
+    _locationTimer?.cancel();
     await _trackingService.stopTracking(currentUser!.uid);
   }
 
@@ -157,11 +187,13 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
               }
             },
             initialCameraPosition: CameraPosition(
-              target: currentPosition != null 
-                ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
-                : const LatLng(6.9271, 79.8612), // Default to Colombo
+              target: currentPosition != null
+                  ? LatLng(currentPosition!.latitude,
+                      currentPosition!.longitude)
+                  : const LatLng(6.9271, 79.8612),
               zoom: 15,
             ),
+            polylines: _polylines,
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             mapToolbarEnabled: true,
@@ -202,19 +234,11 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
                         onPressed: isTracking ? null : _startTracking,
                         icon: const Icon(Icons.play_arrow),
                         label: const Text('Start Route'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          disabledBackgroundColor: Colors.grey,
-                        ),
                       ),
                       ElevatedButton.icon(
                         onPressed: isTracking ? _stopTracking : null,
                         icon: const Icon(Icons.stop),
                         label: const Text('End Route'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          disabledBackgroundColor: Colors.grey,
-                        ),
                       ),
                     ],
                   ),
@@ -229,6 +253,7 @@ class _TruckTrackingScreenState extends State<TruckTrackingScreen> {
 
   @override
   void dispose() {
+    _locationTimer?.cancel();
     mapController?.dispose();
     super.dispose();
   }
