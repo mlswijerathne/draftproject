@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 class DirectionsService {
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/directions/json';
-  static const String _apiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your API key
+  static const String _apiKey = 'AIzaSyCCzqeEB5QM3L851Rk6iZLdQK9_YfTyDps'; // Replace with your API key
 
   Future<List<LatLng>> getDirectionsPoints({
     required LatLng origin,
